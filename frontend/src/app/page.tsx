@@ -21,6 +21,9 @@ export default function LeadsPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [error, setError] = useState<string | null>(null);
 
+    const [sortBy, setSortBy] = useState('createdAt');
+    const [sortOrder, setSortOrder] = useState('desc');
+
     const fetchLeads = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -31,19 +34,25 @@ export default function LeadsPage() {
                     status: statusFilter || undefined,
                     page: currentPage,
                     limit: 10,
-                    sort: 'createdAt',
-                    order: 'desc'
+                    sort: sortBy,
+                    order: sortOrder
                 }
             });
             setLeads(response.data.items);
             setTotalPages(response.data.lastPage);
         } catch (err) {
-            console.error("Failed to fetch leads", err);
-            setError("Could not load leads. Please check your connection.");
+            setError("Could not load leads.");
         } finally {
             setLoading(false);
         }
-    }, [searchQuery, statusFilter, currentPage]);
+    }, [searchQuery, statusFilter, currentPage, sortBy, sortOrder]);
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            fetchLeads();
+        }, 500);
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery, statusFilter, currentPage, sortBy, sortOrder, fetchLeads]);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -72,30 +81,75 @@ export default function LeadsPage() {
                 </div>
 
                 {/* Filters & Search */}
-                <div className="flex flex-col md:flex-row gap-3">
-                    <div className="relative flex-1">
+                <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center">
+
+                    {/* Search (Left side) */}
+                    <div className="relative w-full xl:flex-1">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
-                            placeholder="Search by name, email or company..."
+                            placeholder="Search leads..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-slate-900"
+                            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-slate-900 shadow-sm"
                         />
                     </div>
 
-                    <div className="relative">
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="appearance-none bg-white border border-slate-200 pl-4 pr-10 py-2.5 rounded-xl text-slate-600 font-medium outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer"
-                        >
-                            <option value="">All Statuses</option>
-                            {Object.values(LeadStatus).map((status) => (
-                                <option key={status} value={status}>{status}</option>
-                            ))}
-                        </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                    {/* Controls Group (Right side) */}
+                    <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+
+                        {/* Filter Group */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Filter:</span>
+                            <div className="relative">
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="appearance-none bg-white border border-slate-200 pl-3 pr-8 py-2 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand/20 transition-all cursor-pointer min-w-[120px]"
+                                >
+                                    <option value="">All Status</option>
+                                    {Object.values(LeadStatus).map((status) => (
+                                        <option key={status} value={status}>{status}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                            </div>
+                        </div>
+
+                        {/* Vertical Divider (Hidden on small screens) */}
+                        <div className="hidden md:block w-px h-6 bg-slate-200 mx-1"></div>
+
+                        {/* Sort Group */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Sort by:</span>
+                            <div className="flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-brand/20 transition-all">
+                                <div className="relative border-r border-slate-100">
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => setSortBy(e.target.value)}
+                                        className="appearance-none bg-transparent pl-3 pr-8 py-2 text-sm font-bold text-slate-700 outline-none cursor-pointer min-w-[130px]"
+                                    >
+                                        <option value="createdAt">Date Created</option>
+                                        <option value="updatedAt">Last Updated</option>
+                                        <option value="name">Name</option>
+                                        <option value="value">Value</option>
+                                    </select>
+                                    <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                                </div>
+
+                                <button
+                                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                    className="px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors flex items-center justify-center"
+                                    title={sortOrder === 'asc' ? 'Sort Ascending' : 'Sort Descending'}
+                                >
+                                    {sortOrder === 'asc' ? (
+                                        <span className="flex items-center font-black text-[10px] text-brand">ASC ↑</span>
+                                    ) : (
+                                        <span className="flex items-center font-black text-[10px] text-brand">DESC ↓</span>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

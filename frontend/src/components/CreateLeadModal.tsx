@@ -22,6 +22,8 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess, initialDat
         notes: ''
     });
 
+    const [serverError, setServerError] = useState<string | null>(null);
+
     useEffect(() => {
         if (initialData) {
             setFormData({
@@ -42,12 +44,15 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess, initialDat
                 notes: ''
             });
         }
+        // Reset error when modal opens/closes
+        setServerError(null);
     }, [initialData, isOpen]);
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setServerError(null);
         try {
             const payload = {
                 ...formData,
@@ -59,11 +64,11 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess, initialDat
             } else {
                 await api.post('/leads', payload);
             }
-
             onSuccess();
             onClose();
-        } catch (error) {
-            console.error("Operation failed:", error);
+        } catch (error: any) {
+            const message = error.response?.data?.message;
+            setServerError(Array.isArray(message) ? message[0] : message || "Something went wrong");
         }
     };
 
@@ -147,6 +152,13 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess, initialDat
                             onChange={e => setFormData({...formData, notes: e.target.value})}
                         />
                     </div>
+
+                    {/* Server Error Message Placement */}
+                    {serverError && (
+                        <div className="p-3 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-bold rounded-xl animate-in fade-in slide-in-from-top-1">
+                            {serverError}
+                        </div>
+                    )}
 
                     <div className="pt-4 flex gap-3">
                         <button
