@@ -1,4 +1,6 @@
 ## Mini Lead Tracker (CRM)
+<img width="720" height="450" alt="Screenshot 2026-04-15 at 22 16 59" src="https://github.com/user-attachments/assets/6d1a7d34-a44f-40d2-9317-c94f710e6d62" />
+
 
 A full-stack lead management system built with **NestJS**, **Next.js**, and **MongoDB**. The project is fully containerized using **Docker** for a seamless setup and evaluation.
 
