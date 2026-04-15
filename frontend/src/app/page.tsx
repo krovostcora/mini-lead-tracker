@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, MoreHorizontal, Mail, Building2, ChevronDown } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Mail, Building2, ChevronDown, X } from 'lucide-react';
 import api from '@/api/axios';
 import { Lead, LeadStatus } from '@/types/lead';
 import CreateLeadModal from '@/components/CreateLeadModal';
@@ -19,22 +19,27 @@ export default function LeadsPage() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchLeads = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const response = await api.get('/leads', {
                 params: {
                     q: searchQuery,
                     status: statusFilter || undefined,
                     page: currentPage,
-                    limit: 10 // Наприклад, 10 лідів на сторінку
+                    limit: 10,
+                    sort: 'createdAt',
+                    order: 'desc'
                 }
             });
             setLeads(response.data.items);
             setTotalPages(response.data.lastPage);
-        } catch (error) {
-            console.error("Failed to fetch leads", error);
+        } catch (err) {
+            console.error("Failed to fetch leads", err);
+            setError("Could not load leads. Please check your connection.");
         } finally {
             setLoading(false);
         }
@@ -95,120 +100,140 @@ export default function LeadsPage() {
                 </div>
 
                 {/* Content Area */}
-                {loading ? (
-                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                        <div className="w-8 h-8 border-4 border-brand/20 border-t-brand rounded-full animate-spin"></div>
-                        <p className="text-slate-500 font-medium">Loading leads...</p>
-                    </div>
-                ) : (
-                    <>
-                        {leads.length === 0 ? (
-                            <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
-                                <p className="text-slate-500 text-lg">No leads found matching your criteria.</p>
+                <div className="mt-8">
+                    {error ? (
+                        <div className="flex flex-col items-center justify-center py-20 bg-rose-50 rounded-3xl border border-rose-100 text-center px-4">
+                            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-4">
+                                <X size={24} />
                             </div>
-                        ) : (
-                            <>
-                                {/* Desktop Table */}
-                                <div className="hidden md:block bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead className="bg-slate-50 border-b border-slate-200">
-                                        <tr>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Company</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Value</th>
-                                            <th className="px-6 py-4"></th>
-                                        </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                        {leads.map((lead) => (
-                                            <tr key={lead._id}
-                                                onClick={() => router.push(`/leads/${lead._id}`)}
-                                                className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
-                                                <td className="px-6 py-4">
-                                                    <div className="font-semibold text-slate-900">{lead.name}</div>
-                                                    <div className="text-xs text-slate-500">{lead.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4 text-slate-600 text-sm font-medium">{lead.company || '-'}</td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase ${getStatusStyles(lead.status)}`}>
+                            <h3 className="text-lg font-bold text-slate-900">Connection Error</h3>
+                            <p className="text-slate-500 max-w-xs mt-1 mb-6">{error}</p>
+                            <button
+                                onClick={fetchLeads}
+                                className="px-6 py-2 bg-white border border-rose-200 text-rose-600 font-bold rounded-xl hover:bg-rose-100 transition-colors shadow-sm"
+                            >
+                                Try Again
+                            </button>
+                        </div>
+                    ) : loading ? (
+                        <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                            <div className="w-10 h-10 border-4 border-brand/20 border-t-brand rounded-full animate-spin"></div>
+                            <p className="text-slate-500 font-medium animate-pulse">Fetching leads...</p>
+                        </div>
+                    ) : leads.length === 0 ? (
+                        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-50 text-slate-400 rounded-full mb-4">
+                                <Search size={32} />
+                            </div>
+                            <p className="text-slate-600 font-bold text-lg">No leads found</p>
+                            <p className="text-slate-400 text-sm mt-1">Try adjusting your filters or search query.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            {/* Desktop Table */}
+                            <div className="hidden md:block bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-slate-50/50 border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Company</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Value</th>
+                                        <th className="px-6 py-4"></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                    {leads.map((lead) => (
+                                        <tr
+                                            key={lead._id}
+                                            onClick={() => router.push(`/leads/${lead._id}`)}
+                                            className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                                        >
+                                            <td className="px-6 py-4">
+                                                <div className="font-bold text-slate-900 group-hover:text-brand transition-colors">{lead.name}</div>
+                                                <div className="text-xs text-slate-500">{lead.email}</div>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-600 text-sm font-medium">{lead.company || '—'}</td>
+                                            <td className="px-6 py-4">
+                                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${getStatusStyles(lead.status)}`}>
                                                         {lead.status}
                                                     </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-slate-700 font-semibold text-sm">
-                                                    {lead.value ? `$${lead.value}` : '-'}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button className="p-1 text-slate-400 hover:text-slate-600 transition-colors">
-                                                        <MoreHorizontal size={20} />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-900 font-bold text-sm">
+                                                {lead.value ? `$${lead.value.toLocaleString()}` : '—'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-all">
+                                                    <MoreHorizontal size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                {/* Mobile Cards */}
-                                <div className="md:hidden space-y-4">
-                                    {leads.map((lead) => (
-                                        <div key={lead._id}
-                                             onClick={() => router.push(`/leads/${lead._id}`)}
-                                             className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 active:scale-[0.98] transition-transform">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <h3 className="font-bold text-slate-900 text-lg">{lead.name}</h3>
-                                                    <div className="flex items-center gap-1.5 text-slate-500 text-sm mt-1">
-                                                        <Mail size={14} />
-                                                        <span>{lead.email}</span>
-                                                    </div>
+                            {/* Mobile Cards */}
+                            <div className="md:hidden space-y-4">
+                                {leads.map((lead) => (
+                                    <div
+                                        key={lead._id}
+                                        onClick={() => router.push(`/leads/${lead._id}`)}
+                                        className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 active:scale-[0.98] transition-all"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="space-y-1">
+                                                <h3 className="font-bold text-slate-900 text-lg leading-tight">{lead.name}</h3>
+                                                <div className="flex items-center gap-1.5 text-slate-500 text-xs">
+                                                    <Mail size={12} />
+                                                    <span>{lead.email}</span>
                                                 </div>
-                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase ${getStatusStyles(lead.status)}`}>
-                                                  {lead.status}
-                                                </span>
                                             </div>
-                                            <div className="flex items-center gap-4 text-slate-600 text-sm border-t border-slate-50 pt-4">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Building2 size={14} />
-                                                    <span className="font-medium">{lead.company || 'No company'}</span>
-                                                </div>
-                                                <div className="ml-auto font-bold text-slate-900">
-                                                    {lead.value ? `$${lead.value}` : ''}
-                                                </div>
+                                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${getStatusStyles(lead.status)}`}>
+                                                {lead.status}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-slate-600 text-sm border-t border-slate-50 pt-4">
+                                            <div className="flex items-center gap-1.5">
+                                                <Building2 size={14} className="text-slate-400" />
+                                                <span className="font-medium truncate max-w-[150px]">{lead.company || 'Private'}</span>
+                                            </div>
+                                            <div className="font-black text-slate-900">
+                                                {lead.value ? `$${lead.value}` : ''}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-
-                                {/* Pagination Controls */}
-                                <div className="flex items-center justify-between pt-6 border-t border-slate-200">
-                                    <p className="text-sm text-slate-500 font-medium">
-                                        Page {currentPage} of {totalPages}
-                                    </p>
-                                    <div className="flex gap-2">
-                                        <button
-                                            disabled={currentPage === 1}
-                                            onClick={() => setCurrentPage(prev => prev - 1)}
-                                            className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
-                                        >
-                                            Previous
-                                        </button>
-                                        <button
-                                            disabled={currentPage === totalPages}
-                                            onClick={() => setCurrentPage(prev => prev + 1)}
-                                            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
-                                        >
-                                            Next
-                                        </button>
                                     </div>
+                                ))}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-slate-200">
+                                <p className="text-sm text-slate-500 font-semibold order-2 sm:order-1">
+                                    Showing page <span className="text-slate-900">{currentPage}</span> of <span className="text-slate-900">{totalPages}</span>
+                                </p>
+                                <div className="flex items-center gap-2 order-1 sm:order-2 w-full sm:w-auto">
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(prev => prev - 1)}
+                                        className="flex-1 sm:flex-none px-6 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
+                                    >
+                                        Previous
+                                    </button>
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(prev => prev + 1)}
+                                        className="flex-1 sm:flex-none px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 disabled:opacity-40 transition-all shadow-sm"
+                                    >
+                                        Next
+                                    </button>
                                 </div>
-                            </>
-                        )}
-                    </>
-                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Modal Component */}
+            {/* Modal Component - Now correctly placed inside the main container */}
             <CreateLeadModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
