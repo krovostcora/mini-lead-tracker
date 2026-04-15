@@ -17,7 +17,7 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess }: Props) {
         email: '',
         company: '',
         status: LeadStatus.NEW,
-        value: 0,
+        value: '' as any,
         notes: ''
     });
 
@@ -77,7 +77,7 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess }: Props) {
                                 placeholder="0"
                                 className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all text-slate-900"
                                 value={formData.value}
-                                onChange={e => setFormData({...formData, value: Number(e.target.value)})}
+                                onChange={e => setFormData({...formData, value: e.target.value})}
                             />
                         </div>
                     </div>

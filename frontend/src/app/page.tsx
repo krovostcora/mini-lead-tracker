@@ -5,6 +5,7 @@ import { Search, Plus, Filter, MoreHorizontal, Mail, Building2 } from 'lucide-re
 import api from '@/api/axios';
 import { Lead } from '@/types/lead';
 import CreateLeadModal from '@/components/CreateLeadModal';
+import { getStatusStyles } from '@/utils/statusStyles';
 
 export default function LeadsPage() {
     const [leads, setLeads] = useState<Lead[]>([]);
@@ -96,8 +97,8 @@ export default function LeadsPage() {
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm font-medium">{lead.company || '-'}</td>
                                                 <td className="px-6 py-4">
-                                                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-brand-light text-brand">
-                                                            {lead.status}
+                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusStyles(lead.status)}`}>
+                                                          {lead.status}
                                                         </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-700 font-semibold text-sm">
@@ -126,8 +127,8 @@ export default function LeadsPage() {
                                                         <span>{lead.email}</span>
                                                     </div>
                                                 </div>
-                                                <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-brand-light text-brand uppercase">
-                                                    {lead.status}
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusStyles(lead.status)}`}>
+                                                  {lead.status}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-4 text-slate-600 text-sm border-t border-slate-50 pt-4">
