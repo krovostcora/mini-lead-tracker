@@ -1,4 +1,17 @@
-node_modules
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Environment variables
 .env
-dist
-.next
+.env.local
+
+# Docker logs
+npm-debug.log*
+docker-compose.override.yml
