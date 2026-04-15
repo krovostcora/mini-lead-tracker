@@ -1,32 +1,52 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Plus, Filter, MoreHorizontal, Mail, Building2 } from 'lucide-react';
+import { Search, Plus, MoreHorizontal, Mail, Building2, ChevronDown } from 'lucide-react';
 import api from '@/api/axios';
-import { Lead } from '@/types/lead';
+import { Lead, LeadStatus } from '@/types/lead';
 import CreateLeadModal from '@/components/CreateLeadModal';
 import { getStatusStyles } from '@/utils/statusStyles';
+import { useRouter } from 'next/navigation';
 
 export default function LeadsPage() {
+    const router = useRouter();
     const [leads, setLeads] = useState<Lead[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
     const fetchLeads = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.get('/leads');
+            const response = await api.get('/leads', {
+                params: {
+                    q: searchQuery,
+                    status: statusFilter || undefined,
+                    page: currentPage,
+                    limit: 10 // Наприклад, 10 лідів на сторінку
+                }
+            });
             setLeads(response.data.items);
+            setTotalPages(response.data.lastPage);
         } catch (error) {
             console.error("Failed to fetch leads", error);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [searchQuery, statusFilter, currentPage]);
 
     useEffect(() => {
-        fetchLeads();
-    }, [fetchLeads]);
+        const delayDebounceFn = setTimeout(() => {
+            fetchLeads();
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery, statusFilter, fetchLeads]);
 
     return (
         <main className="min-h-screen bg-surface p-4 md:p-8">
@@ -53,13 +73,25 @@ export default function LeadsPage() {
                         <input
                             type="text"
                             placeholder="Search by name, email or company..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all text-slate-900"
                         />
                     </div>
-                    <button className="flex items-center justify-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-slate-600 font-medium hover:bg-slate-50 transition-all">
-                        <Filter size={18} />
-                        <span>Status</span>
-                    </button>
+
+                    <div className="relative">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="appearance-none bg-white border border-slate-200 pl-4 pr-10 py-2.5 rounded-xl text-slate-600 font-medium outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer"
+                        >
+                            <option value="">All Statuses</option>
+                            {Object.values(LeadStatus).map((status) => (
+                                <option key={status} value={status}>{status}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                    </div>
                 </div>
 
                 {/* Content Area */}
@@ -72,7 +104,7 @@ export default function LeadsPage() {
                     <>
                         {leads.length === 0 ? (
                             <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
-                                <p className="text-slate-500">No leads found. Create your first one!</p>
+                                <p className="text-slate-500 text-lg">No leads found matching your criteria.</p>
                             </div>
                         ) : (
                             <>
@@ -90,16 +122,18 @@ export default function LeadsPage() {
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                         {leads.map((lead) => (
-                                            <tr key={lead._id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
+                                            <tr key={lead._id}
+                                                onClick={() => router.push(`/leads/${lead._id}`)}
+                                                className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
                                                 <td className="px-6 py-4">
                                                     <div className="font-semibold text-slate-900">{lead.name}</div>
                                                     <div className="text-xs text-slate-500">{lead.email}</div>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-600 text-sm font-medium">{lead.company || '-'}</td>
                                                 <td className="px-6 py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusStyles(lead.status)}`}>
-                                                          {lead.status}
-                                                        </span>
+                                                    <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase ${getStatusStyles(lead.status)}`}>
+                                                        {lead.status}
+                                                    </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-slate-700 font-semibold text-sm">
                                                     {lead.value ? `$${lead.value}` : '-'}
@@ -118,7 +152,9 @@ export default function LeadsPage() {
                                 {/* Mobile Cards */}
                                 <div className="md:hidden space-y-4">
                                     {leads.map((lead) => (
-                                        <div key={lead._id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                        <div key={lead._id}
+                                             onClick={() => router.push(`/leads/${lead._id}`)}
+                                             className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 active:scale-[0.98] transition-transform">
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <h3 className="font-bold text-slate-900 text-lg">{lead.name}</h3>
@@ -127,7 +163,7 @@ export default function LeadsPage() {
                                                         <span>{lead.email}</span>
                                                     </div>
                                                 </div>
-                                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusStyles(lead.status)}`}>
+                                                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase ${getStatusStyles(lead.status)}`}>
                                                   {lead.status}
                                                 </span>
                                             </div>
@@ -142,6 +178,29 @@ export default function LeadsPage() {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+
+                                {/* Pagination Controls */}
+                                <div className="flex items-center justify-between pt-6 border-t border-slate-200">
+                                    <p className="text-sm text-slate-500 font-medium">
+                                        Page {currentPage} of {totalPages}
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            disabled={currentPage === 1}
+                                            onClick={() => setCurrentPage(prev => prev - 1)}
+                                            className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
+                                        >
+                                            Previous
+                                        </button>
+                                        <button
+                                            disabled={currentPage === totalPages}
+                                            onClick={() => setCurrentPage(prev => prev + 1)}
+                                            className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
                                 </div>
                             </>
                         )}

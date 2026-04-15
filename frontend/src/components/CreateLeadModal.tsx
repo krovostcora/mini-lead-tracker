@@ -1,38 +1,69 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import api from '@/api/axios';
-import { LeadStatus } from '@/types/lead';
+import { Lead, LeadStatus } from '@/types/lead';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    initialData?: Lead | null;
 }
 
-export default function CreateLeadModal({ isOpen, onClose, onSuccess }: Props) {
+export default function CreateLeadModal({ isOpen, onClose, onSuccess, initialData }: Props) {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         company: '',
         status: LeadStatus.NEW,
-        value: '' as any,
+        value: '' as string,
         notes: ''
     });
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                name: initialData.name || '',
+                email: initialData.email || '',
+                company: initialData.company || '',
+                status: initialData.status || LeadStatus.NEW,
+                value: initialData.value?.toString() || '',
+                notes: initialData.notes || ''
+            });
+        } else {
+            setFormData({
+                name: '',
+                email: '',
+                company: '',
+                status: LeadStatus.NEW,
+                value: '',
+                notes: ''
+            });
+        }
+    }, [initialData, isOpen]);
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await api.post('/leads', formData);
+            const payload = {
+                ...formData,
+                value: formData.value === '' ? 0 : Number(formData.value)
+            };
+
+            if (initialData) {
+                await api.patch(`/leads/${initialData._id}`, payload);
+            } else {
+                await api.post('/leads', payload);
+            }
+
             onSuccess();
             onClose();
-            setFormData({ name: '', email: '', company: '', status: LeadStatus.NEW, value: 0, notes: '' });
         } catch (error) {
-            alert("Error creating lead. Check console.");
-            console.error(error);
+            console.error("Operation failed:", error);
         }
     };
 
@@ -40,7 +71,9 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess }: Props) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
             <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
                 <div className="flex items-center justify-between p-6 border-b border-slate-100">
-                    <h2 className="text-xl font-bold text-slate-900">New Lead</h2>
+                    <h2 className="text-xl font-bold text-slate-900">
+                        {initialData ? 'Edit Lead' : 'New Lead'}
+                    </h2>
                     <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
                         <X size={20} />
                     </button>
@@ -127,7 +160,7 @@ export default function CreateLeadModal({ isOpen, onClose, onSuccess }: Props) {
                             type="submit"
                             className="flex-1 py-2.5 bg-brand hover:bg-brand-dark text-white rounded-xl font-semibold shadow-sm shadow-brand/20 transition-all"
                         >
-                            Create Lead
+                            {initialData ? 'Save Changes' : 'Create Lead'}
                         </button>
                     </div>
                 </form>
